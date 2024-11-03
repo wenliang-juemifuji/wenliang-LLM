@@ -21,7 +21,7 @@ python trans_port_to_eng.py
 ![](../images/图2-1训练曲线.png)
 
 ## 使用 Transformer 实现英译汉
-代码文件 [trans_eng_to_ch.py][trans_eng_to_ch.py] 实现了英译汉。\
+代码文件 [trans_eng_to_ch.py](trans_eng_to_ch.py) 实现了英译汉。\
 运行命令
 ```python
 python trans_eng_to_ch.py
