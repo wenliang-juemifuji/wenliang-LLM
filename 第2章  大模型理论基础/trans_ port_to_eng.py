@@ -109,8 +109,8 @@ def translate(sentence, plot=""):
     predicted_sentence = tokenizer_en.decode([i for i in result 
                                               if i < tokenizer_en.vocab_size])  
 
-    print(‘输入: {}’.format(sentence))
-    print(‘预测输出: {}’.format(predicted_sentence))
+    print("输入: {}".format(sentence))
+    print("预测输出: {}".format(predicted_sentence))
 
 
 def main():
