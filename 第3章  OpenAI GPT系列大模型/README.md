@@ -1,3 +1,5 @@
+
+
 # GPT实现文本分类和生成
 ## 环境安装
 ```python
@@ -45,6 +47,6 @@ python trans_eng_to_ch.py
 真实输出：这 没有 任何 意义
 ```
 
-![](../images/transformer.png)
+![](../images/图3-1 GPT系列大模型的发展历史.png)
 
 
