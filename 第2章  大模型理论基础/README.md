@@ -18,6 +18,9 @@ python trans_port_to_eng.py
 真实输出: this is a problem we have to solve .
 ```
 模型训练过程中的loss曲线：
+![](../images/图2-1训练曲线.png)
+
+## 使用 Transformer 实现英译汉
 
 
 ![](../images/transformer.png)
