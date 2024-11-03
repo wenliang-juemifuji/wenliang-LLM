@@ -1,4 +1,4 @@
-# GPT-1实现中文文本分类
+# GPT-1、GPT-2实现中文文本分类和文本生成
 ## 环境安装
 ```python
 pip install tensorflow
