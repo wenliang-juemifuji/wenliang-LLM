@@ -1,4 +1,4 @@
-# 使用Transformer实现机器翻译
+# Transformer实现机器翻译
 ## 环境安装
 ```python
 pip install tensorflow
