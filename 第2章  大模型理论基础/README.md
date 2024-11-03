@@ -12,5 +12,5 @@
 <h3 align="left">第11章  大模型和推荐系统结合</h3>
 <h3 align="left">第12章  构建私有大模型</h3><br><br>
 
-![](images/WechatIMG193.jpg)
+![](../images/transformer.png)
 
