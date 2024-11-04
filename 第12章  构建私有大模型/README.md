@@ -9,7 +9,7 @@ cp -r ChatGLM2-6B/ptuning ChatGLM3-6B/
 pip install -r requirements.txt
 ```
 其中，transformers库版本推荐为4.30.2，torch推荐使用2.0及以上的版本，以获得最佳的推理性能。
-### 代码调用
+## 代码调用
 ```python
 >>> from transformers import AutoTokenizer, AutoModel
 >>> tokenizer = AutoTokenizer.from_pretrained("THUDM/chatglm3-6b", trust_remote_code=True)
@@ -31,10 +31,28 @@ pip install -r requirements.txt
 尝试呼吸技巧:深呼吸是一种放松技巧,可以帮助你缓解紧张和焦虑,使你更容易入睡。试着慢慢吸气,保持几秒钟,然后缓慢呼气。
 如果这些方法无法帮助你入睡,你可以考虑咨询医生或睡眠专家,寻求进一步的建议。
 ```
-### 网页版示例
+## 网页版示例
 启动一个基于Gradio的网页版示例：
 ```text
 python web_demo.py
 ```
 
 ![](../images/基于Gradio启动ChatGLM3-6B.png)
+
+除了上面的方式，还可以通过如下命令，启动一个基于Streamlit的网页版示例。
+```text
+streamlit run web_demo2.py
+```
+
+![](../images/基于Streamlit启动ChatGLM3-6B.png)
+
+## 命令行示例
+还可以通过命令行启动：
+```text
+python cli_demo.py
+```
+
+![](../images/基于命令行启动ChatGLM3-6B.png)
+
+## 低成本部署
+
