@@ -55,4 +55,62 @@ python cli_demo.py
 ![](../images/基于命令行启动ChatGLM3-6B.png)
 
 ## 低成本部署
+模型默认以FP16精度加载，需要约13 GB的显存。如果您的GPU显存不足，可以选择以量化方式加载模型，具体方法如下：
+```python
+model = AutoModel.from_pretrained("THUDM/chatglm3-6b",trust_remote_code=True).quantize(4)
+```
+也可以在CPU上运行模型，但是推理速度会慢很多。具体方法如下（需要至少32 GB的内存）：
+```python
+model = AutoModel.from_pretrained("THUDM/chatglm3-6b", trust_remote_code=True).float()
+```
+如果您的Mac使用了Apple Silicon或AMD GPU，可以使用MPS后端在GPU上运行ChatGLM3-6B。
+```python
+model = AutoModel.from_pretrained("your local path", trust_remote_code=True).to('mps')
+```
+如果您有多张GPU，但是每张GPU的显存都不够加载完整的模型，您可以使用模型并行的方式，将模型分配到多张GPU上。
+```python
+from utils import load_model_on_gpus
+model = load_model_on_gpus("THUDM/chatglm3-6b", num_gpus=2)
+```
 
+## 微调 ChatGLM3-6B
+### 数据准备
+下载ADGEN数据集，这是一个用于生成广告文案的数据集。ADGEN数据集的任务是根据输入的商品信息生成一段吸引人的广告词。把AdvertiseGen文件夹里的数据分成训练集和验证集，分别保存为train.json和dev.json文件，数据的格式如下：
+
+![](../images/ADGEN数据集的数据格式.png)
+
+### 环境安装
+要进行全参数微调，您需要先安装deepspeed，还需要安装一些有监督微调需要的包。
+```text
+pip install deepspeed
+cd ptuning
+pip install rouge_chinese nltk jieba datasets
+```
+修改微调代码中的相关参数
+```text
+vim ds_train_finetune.sh
+LR=1e-5
+MASTER_PORT=$(shuf -n 1 -i 10000-65535)
+deepspeed --num_gpus=8 --master_port $MASTER_PORT main.py \
+    --deepspeed deepspeed.json \
+    --do_train \
+    --preprocessing_num_workers 32 \
+    --train_file AdvertiseGen/train.json \
+    --test_file AdvertiseGen/dev.json \
+    --prompt_column content \
+    --response_column summary \
+    --model_name_or_path ../models/chatglm3-6b \
+    --output_dir output/adgen-chatglm3-6b-ft \
+    --overwrite_output_dir \
+    --max_source_length 512 \
+    --max_target_length 512 \
+    --per_device_train_batch_size 16 \
+    --per_device_eval_batch_size 1 \
+    --gradient_accumulation_steps 1 \
+    --predict_with_generate \
+    --logging_steps 10 \
+    --save_steps 1000 \
+    --learning_rate $LR \
+    --fp16
+```
+各个参数的含义如下表所示：
