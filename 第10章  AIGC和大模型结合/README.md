@@ -18,6 +18,13 @@ python forward_ddpm.py
 
 ![](../images/ddpm前向过程.png)
 
+代码 [train_ddpm_resnet.py](train_ddpm_resnet.py) 实现了 DDPM 的训练过程，使用残差网络作为噪声估计函数。执行以下命令：
+```text
+python train_ddpm_resnet.py
+```
+可以看到生成的手写体数字：
+
+![](../images/ddpm_resnet.png)
 
 
 
