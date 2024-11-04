@@ -216,7 +216,7 @@ tree ./GLM-main
 | scripts | 存放了一些运行脚本，比如ds_finetune_seq2seq.sh是用于在分布式环境下微调GLM-10B模型 |
 | tasks | 存放了一些任务相关的代码，比如seq2seq文件夹包含序列到序列任务的数据加载和评估函数 |
 
-要想并行训练GLM-10B模型，首先需要把模型切分成多个部分，然后用 [change_mp.py][GLM-main/change_mp.py] 文件中的函数进行调整。
+要想并行训练GLM-10B模型，首先需要把模型切分成多个部分，然后用 [change_mp.py](GLM-main/change_mp.py) 文件中的函数进行调整。
 ```text
 python change_mp.py ./model_file/glm-10b 8
 ll ./model_file
@@ -246,7 +246,7 @@ tree .
 └── val.target
 ```
 训练数据有6个文件：train.source 和 train.target 是训练数据的问题和答案，test.source 和 test.target 是测试数据的问题和答案，val.source 和 val.target 是验证数据的问题和答案。
-编辑 scripts/ds_finetune_seq2seq.sh 文件。其中，CHECKPOINT_PATH 指模型的路径，SAVE_PATH 指微调后的模型保存的路径，MP_SIZE 是指模型被切分成的文件个数。
+编辑 [scripts/ds_finetune_seq2seq.sh](GLM-main/scripts/ds_finetune_seq2seq.sh) 文件。其中，CHECKPOINT_PATH 指模型的路径，SAVE_PATH 指微调后的模型保存的路径，MP_SIZE 是指模型被切分成的文件个数。
 ```text
 vim config_tasks/config_blocklm_10B_cnndm.json
 {
@@ -290,4 +290,126 @@ vim config_tasks/config_blocklm_10B_cnndm.json
   "wall_clock_breakdown": false
 }
 ```
-修改 config_tasks/model_blocklm_10B.sh 文件，这个文件用于定义分词器、任务类型等参数，需要把分词器改为中文分词器ChineseSPTokenizer，这样才能正确地处理中文文本。
+修改 [config_tasks/model_blocklm_10B.sh](GLM-main/config_tasks/model_blocklm_10B.sh) 文件，这个文件用于定义分词器、任务类型等参数，需要把分词器改为中文分词器ChineseSPTokenizer，这样才能正确地处理中文文本。
+```text
+vim config_tasks/model_blocklm_10B.sh
+MODEL_TYPE="GLM-10B"
+MODEL_ARGS="—block-lm \
+            --cloze-eval \
+            --task-mask \
+            --num-layers 48 \
+            --hidden-size 4096 \
+            --num-attention-heads 64 \
+            --max-position-embeddings 1024 \
+            --tokenizer-type ChineseSPTokenizer \
+            --load-pretrained ${CHECKPOINT_PATH}"
+```
+最后，还要修改最后一个文件：[config_tasks/seq_customization.sh](GLM-main/config_tasks/seq_customization.sh)，这个文件用于定义输入/输出长度、模型保存的步数等参数。
+```text
+vim config_tasks/seq_customization.sh
+EXPERIMENT_NAME=${MODEL_TYPE}-customization
+TASK_NAME=customization
+DATA_PATH="${DATA_ROOT}/customization"
+TRAIN_ARGS="—epochs 1 \
+            --lr 1e-5 \
+            --lr-decay-style linear \
+            --warmup 0.06 \
+            --label-smoothing 0.1"
+
+COMMON_ARGS="—save-interval 10000 \
+             --log-interval 50 \
+             --eval-interval 1000 \
+             --eval-iters 100 \
+             --eval-epoch 1"
+
+TASK_ARGS="—src-seq-length 512 \
+           --tgt-seq-length 512 \
+           --min-tgt-length 55 \
+           --length-penalty 0.7 \
+           --no-repeat-ngram-size 3 \
+           --num-beams 5 \
+           --select-topk \
+           --eval-batch-size 1"
+```
+下面是运行脚本 scripts/ds_finetune_seq2seq.sh 开始训练：
+```text
+bash scripts/ds_finetune_seq2seq.sh config_tasks/model_blocklm_10B.sh config_tasks/seq_ customization.sh
+```
+查看模型训练完成后保存的模型文件，它们是 ./model_file/glm-10b-sft/ 目录下，文件以步数命名。
+```text
+cd ./model_file/glm-10b-sft; tree .
+├── 234
+│ ├── mp_rank_00_model_states.pt
+│ ├── mp_rank_01_model_states.pt
+│ ├── mp_rank_02_model_states.pt
+│ ├── mp_rank_03_model_states.pt
+│ ├── mp_rank_04_model_states.pt
+│ ├── mp_rank_05_model_states.pt
+│ ├── mp_rank_06_model_states.pt
+│ └── mp_rank_07_model_states.pt
+├── 468
+│ ├── mp_rank_00_model_states.pt
+│ ├── mp_rank_01_model_states.pt
+│ ├── mp_rank_02_model_states.pt
+│ ├── mp_rank_03_model_states.pt
+│ ├── mp_rank_04_model_states.pt
+│ ├── mp_rank_05_model_states.pt
+│ ├── mp_rank_06_model_states.pt
+│ └── mp_rank_07_model_states.pt
+├── 702
+│ ├── mp_rank_00_model_states.pt
+│ ├── mp_rank_01_model_states.pt
+│ ├── mp_rank_02_model_states.pt
+│ ├── mp_rank_03_model_states.pt
+│ ├── mp_rank_04_model_states.pt
+│ ├── mp_rank_05_model_states.pt
+│ ├── mp_rank_06_model_states.pt
+│ └── mp_rank_07_model_states.pt
+├── latest
+    ├── latest_checkpointed_iteration.txt
+└── zero_to_fp32.py
+```
+选取最后一个检查点，使用 [change_mp.py](GLM-main/change_mp.py) 文件，将模型的参数合并在一个文件中。这样可以方便后续的生成或者评估。
+```text
+python change_mp.py ./model_file/glm-10b-sft/702 1
+```
+我们可以设置 post 请求的 IP 地址和端口，通过 post 请求来调用模型服务。
+```python
+>> import json
+>> import requests
+>> query = "Lilah的家庭画廊有400张照片。在为期两天的大峡谷之旅中，他们第一天在家人相册里拍了一半的照片，第二天比第一天多拍了120张。如果他们将所有这些照片都添加到家庭相册中，请计算相册中的照片总数。"
+>> json_ = {
+        "top_k": 0,
+        "temperature": 0.9,
+        "num_beams": 1,
+        "top_p": 0.7,
+        "repetition_penalty": 1.2,
+        "max_tokens": 1024,
+        "message": [
+        {
+        "content": query,
+            "role": "user"
+            }
+        ]
+    }
+>> response = requests.post(url, json=json_)
+>> s = response.text
+>> res = json.loads(s)[‘output’][0]
+>> print(res)
+
+第一天,他们拍了400张照片的一半,即:
+400 * 1/2 = 200张。
+第二天,他们比第一天多拍120张,所以第二天拍了:
+200 + 120 = 320张。
+两天共拍摄了:
+200 + 320 = 520张。
+将这些照片添加到家庭相册后,总的照片数量为:
+400 + 520 = 920张。
+因此,答案是:920
+```
+
+微调效果对比：
+| 模型名 | 微调前准确率 | 微调后准确率 |
+| --- | --- | --- |
+| ChatGLM-6B | 4.8% | 20.0% |
+| GLM-10B | 9.7% | 25.0% |
