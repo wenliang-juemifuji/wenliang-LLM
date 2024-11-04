@@ -1,6 +1,47 @@
-![](../images/图3-1GPT系列大模型的发展历史.png)
+![](../images/图4-1GLM系列大模型发展时间线.png)
 
-# GPT 实现文本分类与生成
+# 全参数微调 GLM
+## 环境搭建
+下表列出了 GPU 配置的相关环境（备注：表中是 ChatGLM-6B 全参数微调的配置，如果是 LORA 微调，单卡 A100 40GB 就可以。）。
+
+| 配置项 | 参数 |
+| --- | --- |
+| 操作系统 | CentOS 7 | 
+| GPU版本 | 8卡A100 80GB GPUs | 
+| Python版本 | >=3.10 |
+| NIVIDIA驱动程序版本 | 515.65.01 |
+| CUDA工具包 | 11.7 |
+| NCCL | nccl_2.14.3-1+cuda11.7 |
+| cuDNN | 8.8.1.3_cuda 11 |
+
+安装CUDA
+```text
+vim ~/.bashrc
+export PATH=/usr/local/cuda/bin:$PATH
+export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+```
+安装cuDNN
+```text
+sudo cp cudnn-linux-x86_64-8.8.0.121_cuda11-archive/include/cudnn*.h /usr/local/cuda/include/
+sudo cp cudnn-linux-x86_64-8.8.0.121_cuda11-archive/lib/libcudnn* /usr/local/cuda/lib64/
+sudo chmod a+r /usr/local/cuda/include/cudnn*.h /usr/local/cuda/lib64/libcudnn*
+export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+```
+安装PyTorch
+```text
+vim requirements.txt
+protobuf>=3.19.5,<3.20.1
+transformers>=4.26.1
+icetk
+cpm_kernels
+gradio
+pip install —user -r requirements.txt
+pip install —user torch==1.10.0+cu111 torchvision==0.11.0+cu111 torchaudio==0.10.0 -f torch-1.10.0+cu111-cp39-cp39-linux_x86_ 64.whl -f torchvision-0.11.0+cu111-cp39-cp39-linux_x86_64.whl -f torchaudio-0.10.0+cu111-cp39-cp39- linux_x86_64.whl
+```
+## 全参数微调 ChatGLM-6B
+
+
+
 ## GPT1 实现文本分类
 代码文件 [gpt1.py](gpt1.py) 实现了 GPT1，[train_gpt1.py](train_gpt1.py) 实现了 GPT1 模型训练。运行 [train_gpt1.py](train_gpt1.py) 可以实现模型训练，并生成训练后的效果。
 ### 数据准备
