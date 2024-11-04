@@ -114,3 +114,92 @@ deepspeed --num_gpus=8 --master_port $MASTER_PORT main.py \
     --fp16
 ```
 各个参数的含义如下表所示：
+| 参数 | 参数含义 |
+| --- | --- |
+| num_gpus | 使用的GPU数量 |
+| deepspeed | deepspeed的配置文件 |
+| preprocessing_num_workers | 数据预处理的线程数量 |
+| train_file | 训练数据文件的路径 |
+| test_file | 测试数据文件的路径 |
+| prompt_column | 输入列的名称 |
+| response_column | 输出列的名称 |
+| model_name_or_path | 模型名称或路径 |
+| output_dir | 输出模型参数的文件路径 |
+| max_source_length | 最大输入长度 |
+| max_target_length | 最大输出长度 |
+| per_device_train_batch_size | 每个设备的训练批次大小 |
+| per_device_eval_batch_size | 每个设备的评估批次大小 |
+| gradient_accumulation_steps | 梯度累计步数 |
+| predict_with_generate | 是否使用生成模式进行预测 |
+| logging_steps | 记录日志的步数 |
+| save_steps | 保存模型的步数 |
+| learning_rate | 学习率 |
+| fp16 | 是否使用半精度浮点数进行训练 |
+
+执行下面命令，训练模型：
+```text
+bash ds_train_finetune.sh
+```
+当运行代码时，会遇到一个错误提示：ChatGLMTokenizer类没有build_prompt方法。这是因为ChatGLM3-6B的ChatGLMTokenizer类没有实现这个方法。要解决这个问题，您可以参考ChatGLM2-6B中ChatGLMTokenizer类的build_prompt方法，按照相同的逻辑编写代码。
+```python
+vim ../models/chatglm3-6b/tokenization_chatglm.py
+# 在ChatGLMTokenizer类中实现build_prompt方法
+def build_prompt(self, query, history=None):
+    if history is None:
+	history = []
+	prompt = ""
+	for i, (old_query, response) in enumerate(history):
+	    prompt += "[Round {}]\n\n问：{}\n\n答：{}\n\n".format(
+		    i + 1, old_query, response)
+	prompt += "[Round {}]\n\n问：{}\n\n答：".format(len(history) + 1, query)
+    return prompt
+```
+### 模型微调
+在Tokenizer类中添加了build_prompt方法的代码后，继续执行bash ds_train_finetune.sh命令。程序就可以正常运行了。
+模型微调完成后，./output/adgen-chatglm3-6b-ft目录下会生成相应的文件，包含模型的参数文件和各种配置文件。
+```text
+tree ./output/adgen-chatglm3-6b-ft
+├── all_results.json
+├── checkpoint-1000
+│   ├── config.json
+│   ├── configuration_chatglm.py
+│   ├── generation_config.json
+│   ├── global_step1000
+│   │   ├── mp_rank_00_model_states.pt
+│   │   ├── zero_pp_rank_0_mp_rank_00_optim_states.pt
+│   │   ├── zero_pp_rank_1_mp_rank_00_optim_states.pt
+│   │   ├── zero_pp_rank_2_mp_rank_00_optim_states.pt
+│   │   ├── zero_pp_rank_3_mp_rank_00_optim_states.pt
+│   │   ├── zero_pp_rank_4_mp_rank_00_optim_states.pt
+│   │   ├── zero_pp_rank_5_mp_rank_00_optim_states.pt
+│   │   ├── zero_pp_rank_6_mp_rank_00_optim_states.pt
+│   │   └── zero_pp_rank_7_mp_rank_00_optim_states.pt
+│   ├── ice_text.model
+│   ├── latest
+│   ├── modeling_chatglm.py
+│   ├── pytorch_model-00001-of-00002.bin
+│   ├── pytorch_model-00002-of-00002.bin
+│   ├── pytorch_model.bin.index.json
+│   ├── quantization.py
+│   ├── rng_state_0.pth
+│   ├── rng_state_1.pth
+│   ├── rng_state_2.pth
+│   ├── rng_state_3.pth
+│   ├── rng_state_4.pth
+│   ├── rng_state_5.pth
+│   ├── rng_state_6.pth
+│   ├── rng_state_7.pth
+│   ├── special_tokens_map.json
+│   ├── tokenization_chatglm.py
+│   ├── tokenizer_config.json
+│   ├── trainer_state.json
+│   ├── training_args.bin
+│   └── zero_to_fp32.py
+├── trainer_state.json
+└── train_results.json
+```
+### 模型部署
+执行streamlit run web_demo2.py命令来启动新模型。
+
+![](../images/微调之后的模型.png)
+
