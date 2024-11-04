@@ -106,100 +106,66 @@ sh ds_train_finetune.sh
 ```
 在训练过程中，可以观察到GPU的使用情况：
 
+![](../images/图4-7.png)
 
-## GPT1 实现文本分类
-代码文件 [gpt1.py](gpt1.py) 实现了 GPT1，[train_gpt1.py](train_gpt1.py) 实现了 GPT1 模型训练。运行 [train_gpt1.py](train_gpt1.py) 可以实现模型训练，并生成训练后的效果。
-### 数据准备
-我们从 [GitHub - BenDerPan/toutiao-text-classfication-dataset: 今日头条中文新闻（文本）分类数据集](https://link.zhihu.com/?target=https%3A//github.com/BenDerPan/toutiao-text-classfication-dataset) 网址里面下载数据，数据来自今日头条客户端。
+如果想减少显存占用，可以适当减小参数batch_size、max_source_length和max_target_length的值，但是这样做会增加训练时间。
 
-数据格式如下：
+模型微调完成后，./model/目录下会生成相应的文件，包含模型的参数文件和各种配置文件。以pytorch_model开头的文件是模型的参数文件。
 ```text
-6552431613437805063_!_102_!_news_entertainment_!_谢娜为李浩菲澄清网络谣言，之后她的两个行为给自己加分_!_佟丽娅,网络谣言,快乐大本营,李浩菲,谢娜,观众们
+tree ./model/adgen-chatglm-6b-ft
+├── all_results.json
+├── checkpoint-1000
+│   ├── config.json
+│   ├── configuration_chatglm.py
+│   ├── generation_config.json
+│   ├── global_step1000
+│   │   ├── mp_rank_00_model_states.pt
+│   │   ├── zero_pp_rank_0_mp_rank_00_optim_states.pt
+│   │   ├── zero_pp_rank_1_mp_rank_00_optim_states.pt
+│   │   ├── zero_pp_rank_2_mp_rank_00_optim_states.pt
+│   │   ├── zero_pp_rank_3_mp_rank_00_optim_states.pt
+│   │   ├── zero_pp_rank_4_mp_rank_00_optim_states.pt
+│   │   ├── zero_pp_rank_5_mp_rank_00_optim_states.pt
+│   │   ├── zero_pp_rank_6_mp_rank_00_optim_states.pt
+│   │   └── zero_pp_rank_7_mp_rank_00_optim_states.pt
+│   ├── ice_text.model
+│   ├── latest
+│   ├── modeling_chatglm.py
+│   ├── pytorch_model-00001-of-00002.bin
+│   ├── pytorch_model-00002-of-00002.bin
+│   ├── pytorch_model.bin.index.json
+│   ├── quantization.py
+│   ├── rng_state_0.pth
+│   ├── rng_state_1.pth
+│   ├── rng_state_2.pth
+│   ├── rng_state_3.pth
+│   ├── rng_state_4.pth
+│   ├── rng_state_5.pth
+│   ├── rng_state_6.pth
+│   ├── rng_state_7.pth
+│   ├── special_tokens_map.json
+│   ├── tokenization_chatglm.py
+│   ├── tokenizer_config.json
+│   ├── trainer_state.json
+│   ├── training_args.bin
+│   └── zero_to_fp32.py
+├── trainer_state.json
+└── train_results.json
 ```
-每行为一条数据，以_!_分割的个字段，从前往后分别是：新闻ID、分类code（见下文）、分类名称（见下文）、新闻字符串（仅含标题）、新闻关键词。
-
-分类code与名称：
-```text
-100 民生 故事 news_story
-101 文化 文化 news_culture
-102 娱乐 娱乐 news_entertainment
-103 体育 体育 news_sports
-104 财经 财经 news_finance
-106 房产 房产 news_house
-107 汽车 汽车 news_car
-108 教育 教育 news_edu
-109 科技 科技 news_tech
-110 军事 军事 news_military
-112 旅游 旅游 news_travel
-113 国际 国际 news_world
-114 证券 股票 stock
-115 农业 三农 news_agriculture
-116 电竞 游戏 news_game
-```
-整个数据集共有382688条，分布于15个分类中。
-### 模型训练与测试
-运行代码：
+模型微调完成后，可以加载模型，测试模型效果。
 ```python
-python train_gpt1.py
-```
-输出训练过程中的日志：
-```text
-epoch 20, batch 0, loss:3.8556, loss_fine:0.5126, acc:0.8906
-epoch 20, batch 1000, loss:3.6283, loss_fine:0.2713, acc:0.9259
-epoch 20, batch 2000, loss:3.6260, loss_fine:0.2715, acc:0.9256
-epoch 20, batch 3000, loss:3.6289, loss_fine:0.2736, acc:0.9248
-epoch 20, batch 4000, loss:3.6265, loss_fine:0.2719, acc:0.9251
-epoch 20, save model at ./checkpoint/train_cat/ckpt-10
-```
-同时，输出给定文本的分类结果：
-```text
-输入:《狂飙》结局后，张译终于发声了，剧中演员回应一辈子不想见张译
-预测输出: 娱乐
-==============================================================
-输入:教育部下发新通知，将调整今年的高考方向，家长看完心态“崩”了
-预测输出: 教育
-==============================================================
-输入:俄罗斯学会了，发射大批气球飞向乌克兰，乌军导弹快不够用了
-预测输出: 军事
-```
-## GPT2 实现文本分类与生成
-代码文件 [gpt2.py](gpt2.py) 实现了 GPT2，[train_gpt2.py](train_gpt2.py) 实现了 GPT2 模型训练。运行 [train_gpt2.py](train_gpt2.py) 可以实现模型训练，并生成训练后的效果。数据使用和 GPT1 相同的数据。
-### 模型训练与测试
-运行代码：
-```python
-python train_gpt2.py
-```
-代码会生成文本分类的测试结果：
-```text
-真实数据： 女子称与母亲长期遭受男友虐待不堪凌辱联合母亲将男友杀害|国际
-输入: 女子称与母亲长期遭受男友虐待不堪凌辱联合母亲将男友杀害
-预测输出: 女子称与母亲长期遭受男友虐待不堪凌辱联合母亲将男友杀害|国际
-============================
-真实数据： 你玩《刺激战场》会有的三大幻觉是什么？|电竞
-输入: 你玩《刺激战场》会有的三大幻觉是什么？
-预测输出: 你玩《刺激战场》会有的三大幻觉是什么？是什么？|电竞
-============================
-真实数据： 从大阪机场直接去奈良或者京都要怎么去？|旅游
-输入: 从大阪机场直接去奈良或者京都要怎么去？
-预测输出: 从大阪机场直接去奈良或者京都要怎么去？和三亚？|旅游
-============================
-真实数据： 买ps4的你后悔了吗？|电竞
-输入: 买ps4的你后悔了吗？
-预测输出: 买ps4的你后悔了吗？了吗？|电竞
-```
-下面是代码输出的文本生成效果：
-```text
-输入: 杨幂景甜
-预测输出: 杨幂景甜亮相某活动，网友：这是要穿出了吗？|娱乐
-============================
-输入: 整容狂人
-预测输出: 整容狂人被吐槽丑，网友：这是要被骗了|娱乐
-============================
-输入: 北大校长口误
-预测输出: 北大校长口误的字，你知道吗？|教育
-============================
-```
+>> from transformers import AutoTokenizer, AutoModel
+>> tokenizer = AutoTokenizer.from_pretrained("./model/adgen-chatglm-6b-ft"", trust_remote_code=True)
+>> model = AutoModel.from_pretrained("./model/adgen-chatglm-6b-ft", trust_remote_code=True).half().cuda()
+>> model = model.eval()
+>> query = "艾德有2只狗、3只猫，鱼的数量是猫和狗加起来的两倍。艾德一共有多少只宠物？"
+>> response, history = model.chat(tokenizer, query, history=[])
+>> print(response)
 
-
-
+首先,艾德有2只狗和3只猫,总共是2 + 3 = 5只宠物。
+接下来,鱼的数量是猫和狗的两倍,因此鱼的数量是5 * 2 = 10只。
+最后将狗、猫和鱼的数量相加,即5 + 10 = 15只。
+因此一共有15只宠物。
+```
+## 全参数微调 GLM-10B
 
