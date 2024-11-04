@@ -1,4 +1,4 @@
-![](../images/图4-1GLM系列大模型发展时间线.png)
+![](../images/图5-2Llama2-Chat训练过程.png)
 
 # 全参数微调 GLM
 ## 环境搭建
