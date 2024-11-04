@@ -65,4 +65,4 @@ def get_model():
 streamlit run web_demo2.py
 ```
 
-
+![](../images/图6-9ChatGLM2-6B微调后的效果.png)
