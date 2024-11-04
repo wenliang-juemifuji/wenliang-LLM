@@ -39,7 +39,72 @@ pip install —user -r requirements.txt
 pip install —user torch==1.10.0+cu111 torchvision==0.11.0+cu111 torchaudio==0.10.0 -f torch-1.10.0+cu111-cp39-cp39-linux_x86_ 64.whl -f torchvision-0.11.0+cu111-cp39-cp39-linux_x86_64.whl -f torchaudio-0.10.0+cu111-cp39-cp39- linux_x86_64.whl
 ```
 ## 全参数微调 ChatGLM-6B
+下载ChatGLM-6B微调代码
+```text
+git clone https://github.com/THUDM/ChatGLM-6B.git .
+cd ChatGLM-6B
+cd ptuning
+```
+代码下载完毕后，接下来下载微调数据集，把文件保存到../data/目录下。
+```text
+mkdir ./data/; cd ./data/
+wget https://huggingface.co/datasets/BelleGroup/school_math_0.25M/resolve/main/school_math_0.25M.json .
+sed –n ’1,10000p’ school_math_0.25M.json > dev.json
+sed –n ’100001,$p’ school_math_0.25M.json > train.json
+```
+数据准备好之后，下面要接着修改微调代码的相关参数：
+```text
+vim ds_train_finetune.sh
+LR=1e-5
+MASTER_PORT=$(shuf -n 1 -I 10000-65535)
+deepspeed —num_gpus=8 —master_port $MASTER_PORT main.py \
+    --deepspeed deepspeed.json \
+    --do_train \
+    --preprocessing_num_workers 32 \
+    --train_file data/train.json \
+    --test_file data/dev.json \
+    --prompt_column content \
+    --response_column summary \
+    --cache_dir cache/batch16 \
+    --model_name_or_path THUDM/chatglm-6b \
+    --output_dir ./model/adgen-chatglm-6b-ft \
+    --overwrite_output_dir \
+    --max_source_length 512 \
+    --max_target_length 512 \
+    --per_device_train_batch_size 16 \
+    --per_device_eval_batch_size 1 \
+    --gradient_accumulation_steps 1 \
+    --predict_with_generate \
+    --logging_steps 10 \
+    --save_steps 1000 \
+    --learning_rate $LR \
+    --fp16
+```
+修改 [ChatLM-6B/ptuning/main.py](ChatLM-6B/ptuning/main.py) 文件中的num_train_epoch参数（默认num_train_epoch = 3）
+```python
+log_level = training_args.get_process_log_level()
+logger.setLevel(log_level)
+# datasets.utils.logging.set_verbosity(log_level)
+transformers.utils.logging.set_verbosity(log_level)
+transformers.utils.logging.enable_default_handler()
+transformers.utils.logging.enable_explicit_format()
 
+# Log on each process the small summary:
+
+training_args.num_train_epochs = 1
+logger.warning(
+        f"Process rank: {training_args.local_rank}, device: {training_args.device}, n_gpu: 
+                        {training_args.n_gpu}" + f"distributed training: 
+                        {bool(training_args.local_rank != -1)}, 16-bits training: 
+                        {training_args.fp16}"
+)
+logger.info(f"Training/evaluation parameters {training_args}")
+```
+执行 sh ds_train_finetune.sh 命令微调模型。
+```text
+sh ds_train_finetune.sh
+```
+在训练过程中，可以观察到GPU的使用情况：
 
 
 ## GPT1 实现文本分类
