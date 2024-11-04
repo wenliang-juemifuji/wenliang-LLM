@@ -1,6 +1,6 @@
-![](../images/图10-30StableDiffusion单轮反向去噪过程)
+![](../images/图10-30StableDiffusion单轮反向去噪过程.png)
 
-# 高效参数微调
+# Stable Diffusion
 ## 环境搭建
 下载ChatGLM2-6B代码仓库：
 ```text
