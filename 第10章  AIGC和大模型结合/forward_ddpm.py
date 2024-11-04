@@ -38,20 +38,20 @@ def load_data():
     return (x_train, y_train)
 
 def main():
-	print("forward diffusion: q(x_t | x_0)")
-	timesteps = 500
-	X_train, y_train = load_data()
-	gaussian_diffusion = GaussianDiffusion(timesteps)
-	plt.figure(figsize=(16, 8))
-	x_start = X_train[7:8]
-	for idx, t in enumerate([0, 50, 100, 200, 499]):
-	    x_noisy = gaussian_diffusion.q_sample(x_start, t=tf.convert_to_tensor([t]))
-	    x_noisy = x_noisy.numpy()
-	    x_noisy = x_noisy.reshape(28, 28)
-	    plt.subplot(1, 5, 1 + idx)
-	    plt.imshow(x_noisy, cmap="gray")
-	    plt.axis("off")
-	    plt.title(f"t={t}")
+    print("forward diffusion: q(x_t | x_0)")
+    timesteps = 500
+    X_train, y_train = load_data()
+    gaussian_diffusion = GaussianDiffusion(timesteps)
+    plt.figure(figsize=(16, 8))
+    x_start = X_train[7:8]
+    for idx, t in enumerate([0, 50, 100, 200, 499]):
+        x_noisy = gaussian_diffusion.q_sample(x_start, t=tf.convert_to_tensor([t]))
+        x_noisy = x_noisy.numpy()
+        x_noisy = x_noisy.reshape(28, 28)
+        plt.subplot(1, 5, 1 + idx)
+        plt.imshow(x_noisy, cmap="gray")
+        plt.axis("off")
+        plt.title(f"t={t}")
 
 
 if __name__ == "__main__":
