@@ -26,6 +26,12 @@ python train_ddpm_resnet.py
 
 ![](../images/ddpm_resnet.png)
 
+代码 [train_ddpm_unet.py](train_ddpm_net.py) 使用 unet 网络作为噪声估计函数。执行以下命令：
+```text
+python train_ddpm_unet.py
+```
+可以看到生成的手写体数字如下图，生成的图像质量明显提高了。
 
+![](../images/ddpm_unet.png)
 
 
