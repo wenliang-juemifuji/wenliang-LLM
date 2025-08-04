@@ -1,6 +1,7 @@
 ![](../images/图3-1GPT系列大模型的发展历史.png)
 
 # GPT 实现文本分类与生成
+知乎专栏：https://zhuanlan.zhihu.com/p/606318317
 ## GPT1 实现文本分类
 代码文件 [gpt1.py](gpt1.py) 实现了 GPT1，[train_gpt1.py](train_gpt1.py) 实现了 GPT1 模型训练。运行 [train_gpt1.py](train_gpt1.py) 可以实现模型训练，并生成训练后的效果。
 ### 数据准备
