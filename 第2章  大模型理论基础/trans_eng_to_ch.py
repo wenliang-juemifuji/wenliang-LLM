@@ -2,7 +2,14 @@ from transformer import Transformer
 import tensorflow_datasets as tfds
 import re
 import jieba
+import tensorflow as tf
+import numpy as np
+import time
+import random
+
 MAX_LENGTH = 12
+BUFFER_SIZE = 20000
+BATCH_SIZE = 64
 
 def load_data(file_path):
     words_re = re.compile(r'\w+')
@@ -14,7 +21,7 @@ def load_data(file_path):
                 continue
             en_sent = words_re.findall(en_sent.lower())
             ch_sent = ch_sent[:-1]
-            if len(en_sent) < MAX_LEN and len(ch_sent) < MAX_LEN:
+            if len(en_sent) < MAX_LENGTH and len(ch_sent) < MAX_LENGTH:
                 en_sent = " ".join(en_sent)
                 corpus.append([en_sent, ch_sent])
     return corpus
@@ -36,6 +43,7 @@ def pad_with_zero(lang, max_length=MAX_LENGTH):
     lang2 = lang2 + [0 for k in range(n2)]
     return [lang1, lang2]
 
+
 # 定义优化器
 class CustomSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
     def __init__(self, d_model, warmup_steps=4000):
@@ -44,18 +52,11 @@ class CustomSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
         self.warmup_steps = warmup_steps
 
     def __call__(self, step):
+        step = tf.cast(step, tf.float32)
         arg1 = tf.math.rsqrt(step)
         arg2 = step * (self.warmup_steps ** -1.5)
 
-    return tf.math.rsqrt(self.d_model) * tf.math.minimum(arg1, arg2)
-
-# 数据编码
-def encode(lang1, lang2):
-    lang1 = [tokenizer_pt.vocab_size] + tokenizer_pt.encode(lang1.numpy()) +
-             [tokenizer_pt.vocab_size+1]
-    lang2 = [tokenizer_en.vocab_size] + tokenizer_en.encode(
-             lang2.numpy()) + [tokenizer_en.vocab_size+1]
-    return lang1, lang2
+        return tf.math.rsqrt(self.d_model) * tf.math.minimum(arg1, arg2)
 
 def filter_long_sent(x, y, max_length=MAX_LENGTH):
     return tf.logical_and(tf.size(x) <= max_length, tf.size(y) <= max_length)
@@ -67,11 +68,11 @@ def tf_encode(pt, en):
 
 def loss_fun(y_ture, y_pred):
     mask = tf.math.logical_not(tf.math.equal(y_ture, 0))  # 为0掩码标1
-        loss_ = loss_object(y_ture, y_pred)
+    loss_ = loss_object(y_ture, y_pred)
     
-        mask = tf.cast(mask, dtype=loss_.dtype)
-        loss_ *= mask
-        return tf.reduce_mean(loss_)
+    mask = tf.cast(mask, dtype=loss_.dtype)
+    loss_ *= mask
+    return tf.reduce_mean(loss_)
 
 # 构建掩码
 def create_mask(inputs,targets):
@@ -89,6 +90,19 @@ def create_mask(inputs,targets):
 
     return encode_padding_mask, combine_mask, decode_padding_mask
 
+def create_padding_mark(seq):
+    # 获取为0的padding项
+    seq = tf.cast(tf.math.equal(seq, 0), tf.float32)
+
+    # 扩充维度以便用于attention矩阵
+    return seq[:, np.newaxis, np.newaxis, :] # (batch_size,1,1,seq_len)
+
+def create_look_ahead_mark(size):
+    # 1 - 对角线和取下三角的全部对角线（-1->全部）
+    # 这样就可以构造出每个时刻未预测token的掩码
+    mark = 1 - tf.linalg.band_part(tf.ones((size, size)), -1, 0)
+    return mark  # (seq_len, seq_len)
+
 @tf.function
 def train_step(inputs, targets):
     target_inp = targets[:,:-1]
@@ -97,16 +111,19 @@ def train_step(inputs, targets):
     encode_padding_mask, combined_mask, decode_padding_mask = create_mask(inputs, target_inp)
     # 训练过程
     with tf.GradientTape() as tape:
-        predictions, _ = transformer(inputs, tar_inp, True, encode_padding_mask,
-                                     combined_mask, decode_padding_mask)
-        loss = loss_fun(tar_real, predictions)
+        predictions, _ = transformer(inputs, target_inp, training=True, 
+                encode_padding_mask=encode_padding_mask,
+                look_ahead_mask=combined_mask, 
+                decode_padding_mask=decode_padding_mask)
+
+        loss = loss_fun(target_real, predictions)
     # 求梯度
     gradients = tape.gradient(loss, transformer.trainable_variables)
     # 反向传播
     optimizer.apply_gradients(zip(gradients, transformer.trainable_variables))
     # 记录损失值和准确率
     train_loss(loss)
-    train_accuracy(tar_real, predictions)
+    train_accuracy(target_real, predictions)
 
 def predict_func(inp_sentence):
     start_token = [tokenizer_pt.vocab_size]
@@ -122,8 +139,11 @@ def predict_func(inp_sentence):
     for i in range(MAX_LENGTH):       
         enc_padding_mask, combined_mask, dec_padding_mask = create_mask(
             encoder_input, output)
-        predictions, attention_weights = transformer(encoder_input, output, False,
-            enc_padding_mask, combined_mask, dec_padding_mask)
+
+        predictions, attention_weights = transformer(encoder_input, output, training=False,
+            encode_padding_mask=enc_padding_mask, 
+            look_ahead_mask=combined_mask, 
+            decode_padding_mask=dec_padding_mask)
 
         # 从seq_len维度选择最后一个词
         predictions = predictions[: ,-1:, :]  # (batch_size, 1, vocab_size)
@@ -157,10 +177,10 @@ def evaluate(inp_sentence):
 
         predictions, attention_weights = transformer(encoder_input, 
                                                  output,
-                                                 False,
-                                                 enc_padding_mask,
-                                                 combined_mask,
-                                                 dec_padding_mask)
+                                                 training=False,
+                                                 encode_padding_mask=enc_padding_mask,
+                                                 look_ahead_mask=combined_mask,
+                                                 decode_padding_mask=dec_padding_mask)
 
         # 从 seq_len 维度选择最后一个词
         predictions = predictions[: ,-1:, :]  # (batch_size, 1, vocab_size)
@@ -186,6 +206,9 @@ def translate(sentence, plot=''):
     print('预测输出: {}'.format(predicted_sentence))
 
 def main():
+
+    global tokenizer_en, tokenizer_ch, loss_object, train_loss, train_accuracy, transformer, optimizer
+
     corpus = load_data('./data/cmn.txt') # 数据地址
 
     ### 分词
@@ -209,9 +232,8 @@ def main():
     original_str = tokenizer_en.decode(tokenized_str)
     print(original_str)
 
-    BUFFER_SIZE = 20000
-    BATCH_SIZE = 64
     train_examples, val_examples = corpus_format[:20000], corpus_format[20000:]
+    print(train_examples[0])
     train_examples = [encode(k) for k in train_examples]
     train_examples = [k for k in train_examples if len(k[0]) <= MAX_LENGTH and len(k[1]) <= MAX_LENGTH]
     train_examples = [pad_with_zero(k) for k in train_examples]
@@ -279,8 +301,8 @@ def main():
         start = time.time()
 
         # 重置记录项
-        train_loss.reset_states()
-        train_accuracy.reset_states()
+        train_loss.reset_state()
+        train_accuracy.reset_state()
 
         # inputs 英语， targets 汉语
 
@@ -312,9 +334,6 @@ def main():
         ))
 
         print('time in 1 epoch:{} secs\n'.format(time.time()-start))
-    plt.plot(step_list, loss_list)
-    plt.xlabel('train step')
-    plt.ylabel('loss')
 
 
 if __name__ == "__main__":

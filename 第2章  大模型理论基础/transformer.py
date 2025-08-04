@@ -1,4 +1,5 @@
 import tensorflow as tf
+from tensorflow.keras import layers
 import numpy as np
 
 def get_angles(pos, i, d_model):
@@ -174,7 +175,7 @@ class Encoder(layers.Layer):
         emb = word_emb + self.pos_embedding[:,:seq_len,:]
         x = self.dropout(emb, training=training)
         for i in range(self.n_layers):
-            x = self.encode_layer[i](x, training, mark)
+            x = self.encode_layer[i](x, training=training, mask=mark)
 
         return x
 
@@ -242,8 +243,8 @@ class Decoder(layers.Layer):
         # 叠加解码层
         for i in range(self.n_layers):
             h, att_w1, att_w2 = self.decoder_layers[i](h, encoder_out,
-                                                   training, look_ahead_mark,
-                                                   padding_mark)
+                                                   training=training, look_ahead_mask=look_ahead_mark,
+                                                   padding_mask=padding_mark)
             attention_weights['decoder_layer{}_att_w1'.format(i+1)] = att_w1
             attention_weights['decoder_layer{}_att_w2'.format(i+1)] = att_w2
 
@@ -265,11 +266,10 @@ class Transformer(tf.keras.Model):
     def call(self, inputs, targets, training, encode_padding_mask, 
             look_ahead_mask, decode_padding_mask):
 
-        encode_out = self.encoder(inputs, training, encode_padding_mask)
-        print("encode_out", encode_out.shape)
-        decode_out, att_weights = self.decoder(targets, encode_out, training, 
-                                               look_ahead_mask, decode_padding_mask)
-        print("decode_out", decode_out.shape)
+        encode_out = self.encoder(inputs, training=training, mark=encode_padding_mask)
+        decode_out, att_weights = self.decoder(targets, encode_out, training=training, 
+                                               look_ahead_mark=look_ahead_mask, 
+                                               padding_mark=decode_padding_mask)
         final_out = self.final_layer(decode_out)
 
         return final_out, att_weights

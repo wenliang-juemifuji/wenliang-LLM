@@ -1,0 +1,5 @@
+tensorflow==2.19.0
+jieba
+tensorflow-datasets==2.0.0
+pandas
+scikit-learn

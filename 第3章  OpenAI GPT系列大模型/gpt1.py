@@ -5,7 +5,6 @@ import os
 import sys
 from numpy import arange
 import math
-import pyecharts
 import sys,base64,urllib,re
 import multiprocessing
 from sklearn.metrics import roc_auc_score
@@ -16,7 +15,6 @@ import logging
 import logging.config
 import time
 from sklearn.preprocessing import normalize
-from __future__ import absolute_import, division, print_function, unicode_literals
 # 安装tfds pip install tfds-nightly==1.0.2.dev201904090105
 import tensorflow_datasets as tfds
 import tensorflow as tf
@@ -24,7 +22,6 @@ import tensorflow.keras.layers as layers
 
 import time
 import numpy as np
-import matplotlib.pyplot as plt
 import jieba
 print(tf.__version__)
 
@@ -210,7 +207,7 @@ class Decoder(layers.Layer):
 
         h = self.dropout(h, training=training)
         for i in range(self.n_layers):
-            h, att_w1 = self.decoder_layers[i](h, training, look_ahead_mark)
+            h, att_w1 = self.decoder_layers[i](h, training=training, look_ahead_mask=look_ahead_mark)
             attention_weights['decoder_layer{}_att_w1'.format(i+1)] = att_w1
 
         return h, attention_weights
@@ -232,8 +229,8 @@ class GPT1(tf.keras.Model):
         
     def call(self, targets, training, look_ahead_mask):
 
-        decode_out, att_weights = self.decoder(targets, training, 
-                                               look_ahead_mask)
+        decode_out, att_weights = self.decoder(targets, training=training, 
+                                               look_ahead_mark=look_ahead_mask)
         final_out = self.final_layer(decode_out)
         fine_tuning_out = self.fine_tuning_layer(tf.keras.layers.Flatten()(final_out))
 
