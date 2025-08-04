@@ -1,7 +1,8 @@
 # Transformer实现机器翻译
+知乎专栏：https://zhuanlan.zhihu.com/p/603243890
 ## 环境安装
 ```python
-pip install tensorflow
+pip install -r requirements.txt
 ```
 ## Transformer实现
 代码文件 [transformer.py](transformer.py) 实现了 Transformer。
