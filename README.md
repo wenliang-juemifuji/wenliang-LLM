@@ -1,4 +1,5 @@
 <h1 align="center">揭秘大模型：从原理到实战</h1>
+更多大模型相关内容，关注知乎专栏：https://www.zhihu.com/column/c_1626242312622780416
 <h3 align="left">第1章  大模型简介</h3>
 <h3 align="left">第2章  大模型理论基础</h3>
 <h3 align="left">第3章  OpenAI GPT系列大模型</h3>
